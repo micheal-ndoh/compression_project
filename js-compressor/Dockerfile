@@ -4,15 +4,11 @@ WORKDIR /usr/src/js-compressor
 
 COPY package*.json ./
 
-RUN npm ci --only=production && \
-    npm cache clean --force
-
+RUN npm install
 
 COPY index.js ./
 COPY rle.js ./
 COPY lz.js ./
-
-
-
+COPY modules ./modules
 
 ENTRYPOINT ["node", "index.js"] 
