@@ -1,22 +1,18 @@
-
-FROM node:18-alpine AS builder
+FROM node:latest
 
 WORKDIR /app
+
 
 COPY package*.json ./
-
 RUN npm ci --only=production
 
-COPY . .
 
-FROM node:18-alpine
+COPY index.js ./
+COPY rle.js ./
+COPY lz.js ./
 
-WORKDIR /app
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/index.js ./
-COPY --from=builder /app/rle.js ./
-COPY --from=builder /app/lz.js ./
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 
 ENTRYPOINT ["node", "index.js"] 
