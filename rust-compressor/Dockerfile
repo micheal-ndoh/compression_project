@@ -8,12 +8,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/rust-compressor
 
-COPY Cargo.toml Cargo.lock ./
+COPY . .
 
-
-COPY src ./src/
-
-RUN cargo build --release
+RUN cargo build --release --no-default-features
 
 
 ENTRYPOINT ["/usr/src/rust-compressor/target/release/rust-compressor"] 
