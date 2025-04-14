@@ -1,12 +1,11 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use std::fs;
-use std::path::Path;
 
-mod lz;
+mod lz77;
 mod rle;
 
 #[derive(Parser)]
-#[command(author, version, about)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -16,63 +15,58 @@ struct Cli {
 enum Commands {
     /// Compress a file
     Compress {
+        /// Input file path
         input: String,
+        /// Output file path
         output: String,
-        #[arg(short, long)]
-        rle: bool,
-        #[arg(short, long)]
-        lz: bool,
+        /// Compression algorithm to use
+        #[arg(short, long, default_value = "rle")]
+        algorithm: String,
     },
     /// Decompress a file
     Decompress {
+        /// Input file path
         input: String,
+        /// Output file path
         output: String,
-        #[arg(short, long)]
-        rle: bool,
-        #[arg(short, long)]
-        lz: bool,
+        /// Compression algorithm to use
+        #[arg(short, long, default_value = "rle")]
+        algorithm: String,
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Compress {
             input,
             output,
-            rle,
-            lz,
+            algorithm,
         } => {
-            let data = fs::read(&input).expect("Failed to read input file");
-            let compressed = if rle {
-                rle::compress(&data)
-            } else if lz {
-                lz::compress(&data)
-            } else {
-                eprintln!("Please specify compression algorithm (--rle or --lz)");
-                std::process::exit(1);
-            };
-            fs::write(&output, compressed).expect("Failed to write output file");
-            println!("Compressed {} to {}", input, output);
+            match algorithm.as_str() {
+                "rle" => rle::compress_file_rle(&input, &output)?,
+                "lz77" => lz77::compress_file_lz77(&input, &output)?,
+                _ => anyhow::bail!("Invalid algorithm specified. Use either 'rle' or 'lz77'"),
+            }
+            println!("File compressed successfully using {} algorithm", algorithm);
         }
         Commands::Decompress {
             input,
             output,
-            rle,
-            lz,
+            algorithm,
         } => {
-            let data = fs::read(&input).expect("Failed to read input file");
-            let decompressed = if rle {
-                rle::decompress(&data)
-            } else if lz {
-                lz::decompress(&data)
-            } else {
-                eprintln!("Please specify decompression algorithm (--rle or --lz)");
-                std::process::exit(1);
-            };
-            fs::write(&output, decompressed).expect("Failed to write output file");
-            println!("Decompressed {} to {}", input, output);
+            match algorithm.as_str() {
+                "rle" => rle::decompress_file_rle(&input, &output)?,
+                "lz77" => lz77::decompress_file_lz77(&input, &output)?,
+                _ => anyhow::bail!("Invalid algorithm specified. Use either 'rle' or 'lz77'"),
+            }
+            println!(
+                "File decompressed successfully using {} algorithm",
+                algorithm
+            );
         }
     }
+
+    Ok(())
 }
