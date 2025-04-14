@@ -10,7 +10,6 @@ WORKDIR /usr/src/rust-compressor
 
 COPY . .
 
-RUN cargo build --release --no-default-features
-
+RUN cargo build --release --bins
 
 ENTRYPOINT ["/usr/src/rust-compressor/target/release/rust-compressor"] 
