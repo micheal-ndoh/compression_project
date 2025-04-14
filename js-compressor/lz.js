@@ -1,11 +1,4 @@
-/**
- * Compresses data using LZ77 algorithm
- * @param {Buffer} data - The input data to compress
- * @param {Object} options - Compression options
- * @param {number} options.windowSize - Size of the sliding window (default: 1024)
- * @returns {Buffer} - The compressed data
- * @throws {Error} If input is not a Buffer or is empty
- */
+
 function compressLZ77(data, options = {}) {
     if (!Buffer.isBuffer(data)) {
         throw new Error('Input must be a Buffer');
@@ -49,12 +42,7 @@ function compressLZ77(data, options = {}) {
     return Buffer.from(result);
 }
 
-/**
- * Decompresses data that was compressed using LZ77
- * @param {Buffer} data - The compressed data
- * @returns {Buffer} - The decompressed data
- * @throws {Error} If input is not a Buffer, is empty, or has invalid format
- */
+
 function decompressLZ77(data) {
     if (!Buffer.isBuffer(data)) {
         throw new Error('Input must be a Buffer');
