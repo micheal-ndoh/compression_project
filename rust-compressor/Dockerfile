@@ -6,10 +6,14 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /usr/src/rust-compressor
 
-COPY . .
+COPY Cargo.toml Cargo.lock ./
+
+
+COPY src ./src/
 
 RUN cargo build --release
 
-ENTRYPOINT ["/app/target/release/rust-compressor"] 
+
+ENTRYPOINT ["/usr/src/rust-compressor/target/release/rust-compressor"] 
