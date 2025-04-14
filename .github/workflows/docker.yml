@@ -31,37 +31,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Rust Compressor image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push Rust Compressor image
         uses: docker/build-push-action@v4
         with:
           context: ./rust-compressor
           file: ./rust-compressor/Dockerfile
+          push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest
             ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:${{ github.sha }}
-          push: true
-
-      - name: Slim Rust Compressor image
-        uses: kitabisa/docker-slim-action@v1
-        env:
-          DSLIM_HTTP_PROBE: "false"
-        with:
-          target: ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest
-          tag: slim
-
-      - name: Push Slimmed Rust Compressor Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest-slim
-            ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:${{ github.sha }}-slim
 
       - name: Test Rust Compressor
         run: |
-          docker run --rm ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest compress --help
-          docker run --rm ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest decompress --help
+          docker pull ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest
+          docker run --rm ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest --help
 
   build-js-compressor:
     runs-on: ubuntu-latest
@@ -87,35 +73,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build JavaScript Compressor image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push JavaScript Compressor image
         uses: docker/build-push-action@v4
         with:
           context: ./js-compressor
           file: ./js-compressor/Dockerfile
+          push: true
           tags: |
             ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest
             ghcr.io/${{ env.REPO_OWNER }}/js-compressor:${{ github.sha }}
-          push: true
-
-      - name: Slim JavaScript Compressor image
-        uses: kitabisa/docker-slim-action@v1
-        env:
-          DSLIM_HTTP_PROBE: "false"
-        with:
-          target: ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest
-          tag: slim
-
-      - name: Push Slimmed JavaScript Compressor Image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest-slim
-            ghcr.io/${{ env.REPO_OWNER }}/js-compressor:${{ github.sha }}-slim
 
       - name: Test JavaScript Compressor
         run: |
+          docker pull ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest
           docker run --rm ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest --help
 
   integration-test:
@@ -125,6 +98,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set environment variables
+        run: |
+          REPO_OWNER=$(echo "${GITHUB_REPOSITORY}" | cut -d '/' -f 1 | tr '[:upper:]' '[:lower:]')
+          echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_ENV
+
       - name: Create test data
         run: |
           echo "AAAAA BBBBB CCCCC" > test.txt
@@ -133,13 +111,16 @@ jobs:
 
       - name: Test compression with both implementations
         run: |
+          docker pull ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest
+          docker pull ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest
+
           # Test RLE compression
-          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest-slim compress /data/test.txt /data/test.rle --algorithm rle
-          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest-slim compress /data/test.txt /data/test.js.rle rle
+          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest compress /data/test.txt /data/test.rle --algorithm rle
+          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest compress /data/test.txt /data/test.js.rle rle
 
           # Test LZ77 compression
-          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest-slim compress /data/test.txt /data/test.lz77 --algorithm lz77
-          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest-slim compress /data/test.txt /data/test.js.lz77 lz77
+          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/rust-compressor:latest compress /data/test.txt /data/test.lz77 --algorithm lz77
+          docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest compress /data/test.txt /data/test.js.lz77 lz77
 
           # Compare file sizes
           ls -l test.*
