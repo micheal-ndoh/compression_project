@@ -1,1 +1,19 @@
- 
+[package]
+authors = ["Micheal Ndoh  michaelndoh9@gmail.com"]
+description = "Rust implementation of RLE and LZ77 compression algorithms"
+edition = "2021"
+name = "rust-compressor"
+version = "0.1.0"
+
+[dependencies]
+anyhow = "1.0"
+clap = {version = "4.4", features = ["derive"]}
+thiserror = "2.0.12"
+
+[dev-dependencies]
+criterion = "0.5"
+test-case = "3.3"
+
+[[bench]]
+harness = false
+name = "compression_benchmark"
