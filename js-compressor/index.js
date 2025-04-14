@@ -2,14 +2,7 @@ const fs = require('fs');
 const { compressRLE, decompressRLE } = require('./rle');
 const { compressLZ77, decompressLZ77 } = require('./lz');
 
-/**
- * Validates file paths and checks if files exist
- * @param {string} inputPath - Path to the input file
- * @param {string} outputPath - Path to the output file
- * @param {boolean} checkInputExists - Whether to check if input file exists
- * @returns {Promise<void>}
- * @throws {Error} If paths are invalid or files don't exist
- */
+
 async function validatePaths(inputPath, outputPath, checkInputExists = true) {
     if (!inputPath || typeof inputPath !== 'string') {
         throw new Error('Invalid input path');
@@ -26,14 +19,7 @@ async function validatePaths(inputPath, outputPath, checkInputExists = true) {
     }
 }
 
-/**
- * Compresses a file using the specified algorithm
- * @param {string} inputPath - Path to the input file
- * @param {string} outputPath - Path to the output file
- * @param {string} algorithm - Compression algorithm to use ('rle' or 'lz77')
- * @param {Object} options - Algorithm-specific options
- * @returns {Promise<Object>} Compression statistics
- */
+
 async function compressFile(inputPath, outputPath, algorithm, options = {}) {
     try {
         await validatePaths(inputPath, outputPath);
@@ -68,13 +54,7 @@ async function compressFile(inputPath, outputPath, algorithm, options = {}) {
     }
 }
 
-/**
- * Decompresses a file using the specified algorithm
- * @param {string} inputPath - Path to the input file
- * @param {string} outputPath - Path to the output file
- * @param {string} algorithm - Compression algorithm to use ('rle' or 'lz77')
- * @returns {Promise<Object>} Decompression statistics
- */
+
 async function decompressFile(inputPath, outputPath, algorithm) {
     try {
         await validatePaths(inputPath, outputPath);
