@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  rust-compressor:
+    build:
+      context: ./rust-compressor
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/data
+    command: ["compress", "/data/input.txt", "/data/output.rle", "--algorithm", "rle"]
+
+  js-compressor:
+    build:
+      context: ./js-compressor
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/data
+    command: ["compress", "/data/input.txt", "/data/output.js.rle", "rle"] 
