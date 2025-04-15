@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rust_compressor::{compress_lz77, compress_rle, decompress_lz77, decompress_rle};
+use rust_compressor::lz77::{compress_lz77, decompress_lz77};
+use rust_compressor::rle::{compress_rle, decompress_rle};
 
 fn rle_benchmark(c: &mut Criterion) {
     let data = vec![b'a'; 1000];
