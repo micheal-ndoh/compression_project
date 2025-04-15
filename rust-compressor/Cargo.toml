@@ -12,7 +12,9 @@ default = ["benchmarks"]
 [dependencies]
 anyhow = "1.0"
 clap = {version = "4.4", features = ["derive"]}
+glob = "0.3"
 thiserror = "2.0.12"
+wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
 
 [dev-dependencies]
 criterion = "0.5"
@@ -22,3 +24,6 @@ test-case = "3.3"
 harness = false
 name = "compression_benchmark"
 required-features = ["benchmarks"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
