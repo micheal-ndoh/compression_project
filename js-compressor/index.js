@@ -2,7 +2,7 @@ const fs = require('fs');
 const { compressRLE, decompressRLE } = require('./rle');
 const { compressLZ77, decompressLZ77 } = require('./lz');
 const { Transform } = require('stream');
-const { detectFileType, suggestAlgorithm } = require('./file-type');
+const { detectFileType, suggestAlgorithm } = require('./file-type.js');
 const path = require('path');
 
 
