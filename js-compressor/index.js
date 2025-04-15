@@ -1,6 +1,9 @@
 const fs = require('fs');
 const { compressRLE, decompressRLE } = require('./rle');
 const { compressLZ77, decompressLZ77 } = require('./lz');
+const { Transform } = require('stream');
+const { detectFileType, suggestAlgorithm } = require('./file-type');
+const path = require('path');
 
 
 async function validatePaths(inputPath, outputPath, checkInputExists = true) {
@@ -87,7 +90,169 @@ async function decompressFile(inputPath, outputPath, algorithm) {
     }
 }
 
+/**
+ * Creates a transform stream for compression
+ * @param {string} algorithm - 'rle' or 'lz77'
+ * @param {Object} options - Algorithm-specific options
+ * @returns {Transform} - A transform stream
+ */
+function createCompressStream(algorithm, options = {}) {
+    return new Transform({
+        transform(chunk, encoding, callback) {
+            try {
+                let compressed;
+                if (algorithm === 'rle') {
+                    compressed = compressRLE(chunk);
+                } else if (algorithm === 'lz77') {
+                    compressed = compressLZ77(chunk, options);
+                } else {
+                    callback(new Error('Invalid algorithm specified. Use either "rle" or "lz77"'));
+                    return;
+                }
+                callback(null, compressed);
+            } catch (error) {
+                callback(error);
+            }
+        }
+    });
+}
+
+/**
+ * Creates a transform stream for decompression
+ * @param {string} algorithm - 'rle' or 'lz77'
+ * @returns {Transform} - A transform stream
+ */
+function createDecompressStream(algorithm) {
+    return new Transform({
+        transform(chunk, encoding, callback) {
+            try {
+                let decompressed;
+                if (algorithm === 'rle') {
+                    decompressed = decompressRLE(chunk);
+                } else if (algorithm === 'lz77') {
+                    decompressed = decompressLZ77(chunk);
+                } else {
+                    callback(new Error('Invalid algorithm specified. Use either "rle" or "lz77"'));
+                    return;
+                }
+                callback(null, decompressed);
+            } catch (error) {
+                callback(error);
+            }
+        }
+    });
+}
+
+/**
+ * Compresses data from stdin to stdout
+ * @param {string} algorithm - 'rle' or 'lz77'
+ * @param {Object} options - Algorithm-specific options
+ * @returns {Promise} - Resolves when compression is complete
+ */
+async function compressStream(algorithm, options = {}) {
+    return new Promise((resolve, reject) => {
+        process.stdin
+            .pipe(createCompressStream(algorithm, options))
+            .pipe(process.stdout)
+            .on('finish', resolve)
+            .on('error', reject);
+    });
+}
+
+/**
+ * Decompresses data from stdin to stdout
+ * @param {string} algorithm - 'rle' or 'lz77'
+ * @returns {Promise} - Resolves when decompression is complete
+ */
+async function decompressStream(algorithm) {
+    return new Promise((resolve, reject) => {
+        process.stdin
+            .pipe(createDecompressStream(algorithm))
+            .pipe(process.stdout)
+            .on('finish', resolve)
+            .on('error', reject);
+    });
+}
+
+/**
+ * Compresses multiple files
+ * @param {string[]} inputPaths - Array of input file paths
+ * @param {string} outputDir - Output directory
+ * @param {string} algorithm - 'rle', 'lz77', or 'auto'
+ * @param {Object} options - Algorithm-specific options
+ * @returns {Promise<Object[]>} - Array of compression statistics
+ */
+async function compressFiles(inputPaths, outputDir, algorithm = 'auto', options = {}) {
+    const results = [];
+
+    for (const inputPath of inputPaths) {
+        try {
+            const outputPath = path.join(outputDir, path.basename(inputPath) +
+                (algorithm === 'rle' ? '.rle' : '.lz77'));
+
+            // Detect file type and suggest algorithm if auto is selected
+            const mimeType = await detectFileType(inputPath);
+            const selectedAlgorithm = algorithm === 'auto' ?
+                suggestAlgorithm(mimeType) : algorithm;
+
+            const stats = await compressFile(inputPath, outputPath, selectedAlgorithm, options);
+            results.push({
+                input: inputPath,
+                output: outputPath,
+                algorithm: selectedAlgorithm,
+                ...stats
+            });
+        } catch (error) {
+            results.push({
+                input: inputPath,
+                error: error.message
+            });
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Decompresses multiple files
+ * @param {string[]} inputPaths - Array of input file paths
+ * @param {string} outputDir - Output directory
+ * @param {string} algorithm - 'rle' or 'lz77'
+ * @returns {Promise<Object[]>} - Array of decompression statistics
+ */
+async function decompressFiles(inputPaths, outputDir, algorithm) {
+    const results = [];
+
+    for (const inputPath of inputPaths) {
+        try {
+            const outputPath = path.join(outputDir, path.basename(inputPath)
+                .replace(/\.(rle|lz77)$/, ''));
+
+            const stats = await decompressFile(inputPath, outputPath, algorithm);
+            results.push({
+                input: inputPath,
+                output: outputPath,
+                algorithm,
+                ...stats
+            });
+        } catch (error) {
+            results.push({
+                input: inputPath,
+                error: error.message
+            });
+        }
+    }
+
+    return results;
+}
+
 module.exports = {
     compressFile,
-    decompressFile
+    decompressFile,
+    compressStream,
+    decompressStream,
+    createCompressStream,
+    createDecompressStream,
+    compressFiles,
+    decompressFiles
 }; 
