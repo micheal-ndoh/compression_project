@@ -9,5 +9,6 @@ RUN npm install
 COPY index.js ./
 COPY rle.js ./
 COPY lz.js ./
+COPY file-type.js ./
 
 ENTRYPOINT ["node", "index.js"] 
