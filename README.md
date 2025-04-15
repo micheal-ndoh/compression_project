@@ -1,6 +1,6 @@
 # Compression Project
 
-This project implements RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript. It provides both containerized and local installation options.
+This project implements RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript. It provides both containerized and local installation options, with support for stdin/stdout, file type detection, WASM compilation, and multiple file processing.
 
 ## Table of Contents
 
@@ -9,6 +9,7 @@ This project implements RLE (Run-Length Encoding) and LZ77 compression algorithm
 - [Usage](#usage)
   - [JavaScript Compressor](#javascript-compressor)
   - [Rust Compressor](#rust-compressor)
+- [Features](#features)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
 
@@ -48,6 +49,7 @@ docker build -t compression-project .
 - Node.js (v14 or higher)
 - Rust (latest stable)
 - Cargo
+- wasm-pack (for WASM compilation)
 
 ### JavaScript Compressor Installation
 
@@ -67,6 +69,70 @@ cd rust-compressor
 
 # Build the project
 cargo build --release
+
+# Build WASM
+wasm-pack build --target web
+```
+
+## Features
+
+### 1. Stdin/Stdout Support
+
+Both implementations support reading from stdin and writing to stdout using the `-` character:
+
+```bash
+# Compress from stdin to stdout
+cat input.txt | node cli.js compress - - --algorithm rle > output.rle
+
+# Decompress from stdin to stdout
+cat output.rle | node cli.js decompress - - --algorithm rle > decompressed.txt
+
+# Rust version
+cat input.txt | cargo run -- compress - - --algorithm rle > output.rle
+cat output.rle | cargo run -- decompress - - --algorithm rle > decompressed.txt
+```
+
+### 2. File Type Detection
+
+The compressor can automatically detect file types and choose the best algorithm:
+
+```bash
+# Automatic algorithm selection
+node cli.js compress input.txt output --algorithm auto
+
+# Rust version
+cargo run -- compress input.txt output --algorithm auto
+```
+
+### 3. WASM Support
+
+The Rust implementation can be used in JavaScript through WebAssembly:
+
+```javascript
+import init, { compress_rle_wasm, decompress_rle_wasm } from './rust-compressor/pkg/rust_compressor.js';
+
+async function example() {
+    await init();
+    const data = new Uint8Array([65, 65, 65, 66, 66, 67]);
+    const result = compress_rle_wasm(data);
+    console.log('Compression ratio:', result.compression_ratio());
+}
+```
+
+### 4. Multiple File Processing
+
+Process multiple files in a single command:
+
+```bash
+# Compress all .txt files
+node cli.js compress "*.txt" output_dir --algorithm auto
+
+# Decompress all .rle files
+node cli.js decompress "*.rle" output_dir --algorithm rle
+
+# Rust version
+cargo run -- compress "*.txt" output_dir --algorithm auto
+cargo run -- decompress "*.rle" output_dir --algorithm rle
 ```
 
 ## Usage
@@ -84,6 +150,9 @@ node cli.js compress --input input.txt --output compressed.lz77 --algorithm lz77
 
 # Decompress a file
 node cli.js decompress --input compressed.rle --output decompressed.txt --algorithm rle
+
+# Process multiple files
+node cli.js compress --input "*.txt" --output compressed_dir --algorithm auto
 ```
 
 ### Rust Compressor
@@ -91,17 +160,17 @@ node cli.js decompress --input compressed.rle --output decompressed.txt --algori
 #### Command Line Usage
 
 ```bash
-# Navigate to rust-compressor directory
-cd rust-compressor
-
 # Compress using RLE
-cargo run --release -- compress input.txt output.txt --algorithm rle
+cargo run --release -- compress input.txt output.rle --algorithm rle
 
 # Compress using LZ77
-cargo run --release -- compress input.txt output.txt --algorithm lz77
+cargo run --release -- compress input.txt output.lz77 --algorithm lz77
 
 # Decompress a file
-cargo run --release -- decompress output.txt decompressed.txt --algorithm rle
+cargo run --release -- decompress output.rle decompressed.txt --algorithm rle
+
+# Process multiple files
+cargo run --release -- compress "*.txt" output_dir --algorithm auto
 ```
 
 ## API Documentation
@@ -112,7 +181,7 @@ cargo run --release -- decompress output.txt decompressed.txt --algorithm rle
 
 - `inputPath`: Path to input file
 - `outputPath`: Path to output file
-- `algorithm`: 'rle' or 'lz77'
+- `algorithm`: 'rle', 'lz77', or 'auto'
 - `options`: Algorithm-specific options (for LZ77: { windowSize: number })
 - Returns: Promise with compression statistics
 
@@ -123,6 +192,32 @@ cargo run --release -- decompress output.txt decompressed.txt --algorithm rle
 - `algorithm`: 'rle' or 'lz77'
 - Returns: Promise with decompression statistics
 
+#### compressStream(algorithm, options)
+
+- `algorithm`: 'rle' or 'lz77'
+- `options`: Algorithm-specific options
+- Returns: Promise that resolves when compression is complete
+
+#### decompressStream(algorithm)
+
+- `algorithm`: 'rle' or 'lz77'
+- Returns: Promise that resolves when decompression is complete
+
+#### compressFiles(inputPaths, outputDir, algorithm, options)
+
+- `inputPaths`: Array of input file paths
+- `outputDir`: Output directory
+- `algorithm`: 'rle', 'lz77', or 'auto'
+- `options`: Algorithm-specific options
+- Returns: Promise with array of compression statistics
+
+#### decompressFiles(inputPaths, outputDir, algorithm)
+
+- `inputPaths`: Array of input file paths
+- `outputDir`: Output directory
+- `algorithm`: 'rle' or 'lz77'
+- Returns: Promise with array of decompression statistics
+
 ### Rust API
 
 #### Command Line Options
@@ -132,11 +227,11 @@ USAGE:
     rust-compressor <COMMAND>
 
 COMMANDS:
-    compress     Compress a file
-    decompress   Decompress a file
+    compress     Compress a file or stdin
+    decompress   Decompress a file or stdin
 
 OPTIONS:
-    --algorithm <ALGORITHM>    Compression algorithm [rle, lz77]
+    --algorithm <ALGORITHM>    Compression algorithm [rle, lz77, auto]
 ```
 
 ### Getting Help
