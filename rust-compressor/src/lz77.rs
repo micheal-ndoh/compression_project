@@ -97,6 +97,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_lz_roundtrip() {
+        let input = b"ABABABABABAB";
+        let compressed = compress_lz77(input);
+        let decompressed = decompress_lz77(&compressed);
+        assert_eq!(input.to_vec(), decompressed);
+    }
+
+    #[test]
     fn test_compress_lz77() {
         let input = b"ABABABAB";
         let compressed = compress_lz77(input);

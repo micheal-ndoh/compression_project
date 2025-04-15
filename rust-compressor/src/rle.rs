@@ -68,6 +68,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_rle_roundtrip() {
+        let input = b"AAABBBCCCCCDDDDE";
+        let compressed = compress_rle(input);
+        let decompressed = decompress_rle(&compressed);
+        assert_eq!(input.to_vec(), decompressed);
+    }
+
+    #[test]
     fn test_compress_rle() {
         let input = b"AAAABBBCCDAA";
         let compressed = compress_rle(input);
