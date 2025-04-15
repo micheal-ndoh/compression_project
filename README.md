@@ -1,61 +1,115 @@
 # Compression Project
 
-A project implementing RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript.
+This project implements RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript. It provides both containerized and local installation options.
 
-## Features
+## Table of Contents
 
-- RLE (Run-Length Encoding) compression
-- LZ77 compression
-- Cross-language implementations (Rust and JavaScript)
-- Configurable compression options
-- Performance statistics
-- Error handling
-- File I/O support
+- [Docker Installation](#docker-installation)
+- [Local Installation](#local-installation)
+- [Usage](#usage)
+  - [JavaScript Compressor](#javascript-compressor)
+  - [Rust Compressor](#rust-compressor)
+- [API Documentation](#api-documentation)
+- [Troubleshooting](#troubleshooting)
 
-## References
+## Docker Installation
 
-- [RLE](https://hydrolix.io/blog/run-length-encoding/)
-- [LZ77](https://medium.com/@vincentcorbee/lz77-compression-in-javascript-cd2583d2a8bd)
-
-## JavaScript Implementation
-
-### Installation
+### Pull the Docker Image
 
 ```bash
+docker pull your-registry/compression-project:latest
+```
+
+### Run the Container
+
+```bash
+# Run JavaScript version
+docker run -v $(pwd):/data your-registry/compression-project:latest js-compress
+
+# Run Rust version
+docker run -v $(pwd):/data your-registry/compression-project:latest rust-compress
+```
+
+### Build the Docker Image Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/compression-project.git
+cd compression-project
+
+# Build the image
+docker build -t compression-project .
+```
+
+## Local Installation
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- Rust (latest stable)
+- Cargo
+
+### JavaScript Compressor Installation
+
+```bash
+# Navigate to JavaScript project
 cd js-compressor
+
+# Install dependencies
 npm install
 ```
 
-### Usage
+### Rust Compressor Installation
 
-```javascript
-const { compressFile, decompressFile } = require('./index');
+```bash
+# Navigate to Rust project
+cd rust-compressor
 
-// Basic compression
-async function example() {
-    try {
-        // Compress a file using RLE
-        const rleStats = await compressFile('input.txt', 'output.rle', 'rle');
-        console.log('RLE Compression Stats:', rleStats);
-
-        // Compress a file using LZ77 with custom window size
-        const lz77Stats = await compressFile('input.txt', 'output.lz77', 'lz77', {
-            windowSize: 2048
-        });
-        console.log('LZ77 Compression Stats:', lz77Stats);
-
-        // Decompress files
-        const decompressStats = await decompressFile('output.rle', 'decompressed.txt', 'rle');
-        console.log('Decompression Stats:', decompressStats);
-    } catch (error) {
-        console.error('Error:', error.message);
-    }
-}
+# Build the project
+cargo build --release
 ```
 
-### API Documentation
+## Usage
+
+### JavaScript Compressor
+
+#### Command Line Usage
+
+```bash
+# Compress a file using RLE
+node cli.js compress --input input.txt --output compressed.rle --algorithm rle
+
+# Compress a file using LZ77
+node cli.js compress --input input.txt --output compressed.lz77 --algorithm lz77 --window-size 2048
+
+# Decompress a file
+node cli.js decompress --input compressed.rle --output decompressed.txt --algorithm rle
+```
+
+### Rust Compressor
+
+#### Command Line Usage
+
+```bash
+# Navigate to rust-compressor directory
+cd rust-compressor
+
+# Compress using RLE
+cargo run --release -- compress input.txt output.txt --algorithm rle
+
+# Compress using LZ77
+cargo run --release -- compress input.txt output.txt --algorithm lz77
+
+# Decompress a file
+cargo run --release -- decompress output.txt decompressed.txt --algorithm rle
+```
+
+## API Documentation
+
+### JavaScript API
 
 #### compressFile(inputPath, outputPath, algorithm, options)
+
 - `inputPath`: Path to input file
 - `outputPath`: Path to output file
 - `algorithm`: 'rle' or 'lz77'
@@ -63,34 +117,15 @@ async function example() {
 - Returns: Promise with compression statistics
 
 #### decompressFile(inputPath, outputPath, algorithm)
+
 - `inputPath`: Path to compressed file
 - `outputPath`: Path to output file
 - `algorithm`: 'rle' or 'lz77'
 - Returns: Promise with decompression statistics
 
-## Rust Implementation
+### Rust API
 
-### Installation
-
-```bash
-cd rust-compressor
-cargo build --release
-```
-
-### Usage
-
-```bash
-# Compress a file using RLE
-cargo run -- compress input.txt output.rle --algorithm rle
-
-# Compress a file using LZ77
-cargo run -- compress input.txt output.lz77 --algorithm lz77
-
-# Decompress a file
-cargo run -- decompress output.rle decompressed.txt --algorithm rle
-```
-
-### Command Line Options
+#### Command Line Options
 
 ```
 USAGE:
@@ -101,60 +136,16 @@ COMMANDS:
     decompress   Decompress a file
 
 OPTIONS:
-    --algorithm <ALGORITHM>    Compression algorithm to use [default: rle]
-                              [possible values: rle, lz77]
+    --algorithm <ALGORITHM>    Compression algorithm [rle, lz77]
 ```
 
-### API Documentation
+### Getting Help
 
-The Rust implementation provides both a command-line interface and a library API:
+- Open an issue on GitHub
+- Check the documentation
+- Contact via email <michalndoh9@gmail.com>
 
-```rust
-use rust_compressor::{compress_rle, decompress_rle, compress_lz77, decompress_lz77};
+## References
 
-// Compress data using RLE
-let data = b"AAAABBBCCDAA";
-let compressed = compress_rle(data);
-let decompressed = decompress_rle(&compressed);
-
-// Compress data using LZ77
-let compressed = compress_lz77(data);
-let decompressed = decompress_lz77(&compressed);
-```
-
-## Performance Comparison
-
-Both implementations provide performance statistics:
-
-### JavaScript Output Example
-```javascript
-{
-    originalSize: 1000,
-    compressedSize: 500,
-    compressionRatio: "0.50",
-    compressionTime: "0.123",
-    algorithm: "lz77",
-    options: { windowSize: 2048 }
-}
-```
-
-### Rust Output Example
-```rust
-File compressed successfully using lz77 algorithm
-Original size: 1000 bytes
-Compressed size: 500 bytes
-Compression ratio: 0.50
-```
-
-## Error Handling
-
-Both implementations include comprehensive error handling:
-
-- Invalid input data
-- File I/O errors
-- Invalid compression formats
-- Algorithm-specific errors
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+- [RLE Documentation](https://hydrolix.io/blog/run-length-encoding/)
+- [LZ77 Documentation](https://medium.com/@vincentcorbee/lz77-compression-in-javascript-cd2583d2a8bd)
