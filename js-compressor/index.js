@@ -5,6 +5,17 @@ const { Transform } = require('stream');
 const { detectFileType, suggestAlgorithm } = require('./file-type.js');
 const path = require('path');
 
+// Create output directories if they don't exist
+const OUTPUT_DIRS = {
+    compressed: path.join(__dirname, 'output', 'compressed'),
+    decompressed: path.join(__dirname, 'output', 'decompressed')
+};
+
+async function ensureOutputDirs() {
+    for (const dir of Object.values(OUTPUT_DIRS)) {
+        await fs.promises.mkdir(dir, { recursive: true });
+    }
+}
 
 async function validatePaths(inputPath, outputPath, checkInputExists = true) {
     if (!inputPath || typeof inputPath !== 'string') {
@@ -25,6 +36,12 @@ async function validatePaths(inputPath, outputPath, checkInputExists = true) {
 
 async function compressFile(inputPath, outputPath, algorithm, options = {}) {
     try {
+        await ensureOutputDirs();
+        if (!outputPath || outputPath === 'auto') {
+            const fileName = path.basename(inputPath);
+            const extension = algorithm === 'rle' ? '.rle' : '.lz77';
+            outputPath = path.join(OUTPUT_DIRS.compressed, `${fileName}${extension}`);
+        }
         await validatePaths(inputPath, outputPath);
 
         const data = await fs.promises.readFile(inputPath);
@@ -60,6 +77,11 @@ async function compressFile(inputPath, outputPath, algorithm, options = {}) {
 
 async function decompressFile(inputPath, outputPath, algorithm) {
     try {
+        await ensureOutputDirs();
+        if (!outputPath || outputPath === 'auto') {
+            const fileName = path.basename(inputPath).replace(/\.(rle|lz77)$/, '');
+            outputPath = path.join(OUTPUT_DIRS.decompressed, fileName);
+        }
         await validatePaths(inputPath, outputPath);
 
         const data = await fs.promises.readFile(inputPath);
