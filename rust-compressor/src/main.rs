@@ -8,6 +8,16 @@ mod file_type;
 mod lz77;
 mod rle;
 
+// Define output directories
+const OUTPUT_DIRS: [&str; 2] = ["output/compressed", "output/decompressed"];
+
+fn ensure_output_dirs() -> Result<()> {
+    for dir in OUTPUT_DIRS.iter() {
+        fs::create_dir_all(dir)?;
+    }
+    Ok(())
+}
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -64,7 +74,20 @@ fn process_multiple_files(
     algorithm: &str,
     is_compression: bool,
 ) -> Result<()> {
+    ensure_output_dirs()?;
     let paths = glob::glob(input_pattern)?;
+
+    // If output_dir is "auto", use our predefined output directories
+    let output_dir = if output_dir == "auto" {
+        if is_compression {
+            OUTPUT_DIRS[0]
+        } else {
+            OUTPUT_DIRS[1]
+        }
+    } else {
+        output_dir
+    };
+
     fs::create_dir_all(output_dir)?;
 
     for path in paths {
@@ -111,6 +134,7 @@ fn process_multiple_files(
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    ensure_output_dirs()?;
 
     match cli.command {
         Commands::Compress {
@@ -131,6 +155,21 @@ fn main() -> Result<()> {
                     }
                 } else {
                     &algorithm
+                };
+
+                let output = if output == "auto" {
+                    let file_name = Path::new(&input)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("output");
+                    let extension = if selected_algorithm == "rle" {
+                        ".rle"
+                    } else {
+                        ".lz77"
+                    };
+                    format!("{}/{}{}", OUTPUT_DIRS[0], file_name, extension)
+                } else {
+                    output
                 };
 
                 let compressed = match selected_algorithm {
@@ -156,6 +195,18 @@ fn main() -> Result<()> {
                 process_multiple_files(&input, &output, &algorithm, false)?;
             } else {
                 let data = read_input(&input)?;
+
+                let output = if output == "auto" {
+                    let file_name = Path::new(&input)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n.replace(".rle", "").replace(".lz77", ""))
+                        .unwrap_or("output".to_string());
+                    format!("{}/{}", OUTPUT_DIRS[1], file_name)
+                } else {
+                    output
+                };
+
                 let decompressed = match algorithm.as_str() {
                     "rle" => rle::decompress_rle(&data),
                     "lz77" => lz77::decompress_lz77(&data),
