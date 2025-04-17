@@ -15,10 +15,15 @@ This project implements RLE (Run-Length Encoding) and LZ77 compression algorithm
 
 ## Docker Installation
 
-### Pull the Docker Image
+### Pull the Docker Image either the rust compressor or the java script(js) compressor
 
 ```bash
-docker pull your-registry/compression-project:latest
+docker pull ghcr.io/micheal-ndoh/rust-compressor:latest
+
+```
+
+```bash
+docker pull ghcr.io/micheal-ndoh/js-compressor:latest
 ```
 
 ### Run the Container
