@@ -19,11 +19,7 @@ const MAGIC_NUMBERS = {
     'application/x-bzip2': [[0x42, 0x5A, 0x68]],
 };
 
-/**
- * Detects the file type based on magic numbers and extension
- * @param {string} filePath - Path to the file
- * @returns {Promise<string>} - Detected MIME type
- */
+
 async function detectFileType(filePath) {
     try {
         const buffer = await fs.promises.readFile(filePath, { end: 4 });
