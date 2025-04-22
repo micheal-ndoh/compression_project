@@ -121,4 +121,4 @@ jobs:
           docker run --rm -v $(pwd):/data ghcr.io/${{ env.REPO_OWNER }}/js-compressor:latest compress /data/test.txt /data/test.js.lz77 lz77
 
           # Compare file sizes
-          ls -l test.*
+          ls -lh test.*
