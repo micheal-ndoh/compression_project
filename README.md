@@ -36,6 +36,53 @@ docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest
 ```
 
+### Docker Usage Examples
+
+#### Compressing Files
+
+```bash
+# Compress a single file using RLE (JavaScript version)
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle
+
+# Compress a single file using LZ77 (Rust version)
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest compress /data/input.txt /data/output.lz77 --algorithm lz77
+
+# Compress multiple files (JavaScript version)
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress "/data/*.txt" /data/compressed --algorithm auto
+
+# Compress from stdin to stdout
+cat input.txt | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest compress - - --algorithm rle > output.rle
+```
+
+#### Decompressing Files
+
+```bash
+# Decompress a single file (JavaScript version)
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest decompress /data/output.rle /data/decompressed.txt --algorithm rle
+
+# Decompress a single file (Rust version)
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest decompress /data/output.lz77 /data/decompressed.txt --algorithm lz77
+
+# Decompress multiple files
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest decompress "/data/*.rle" /data/decompressed --algorithm rle
+
+# Decompress from stdin to stdout
+cat output.rle | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest decompress - - --algorithm rle > decompressed.txt
+```
+
+#### Additional Docker Options
+
+```bash
+# Run with specific algorithm and window size
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.lz77 --algorithm lz77 --window-size 2048
+
+# Run with verbose output
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle --verbose
+
+# Run with force overwrite
+docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle --force
+```
+
 ## Local Installation
 
 ### Prerequisites
