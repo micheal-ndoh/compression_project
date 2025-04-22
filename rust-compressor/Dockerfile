@@ -1,28 +1,37 @@
-# Build stage
-FROM rust:1.75-slim as builder
+# Use an official Rust runtime as a base image
+FROM rust:1.77-slim-bookworm AS builder
 
-WORKDIR /usr/src/rust-compressor
+# Set the working directory in the container
+WORKDIR /usr/src/app
 
-# Copy only the files needed for building
+# Copy the Cargo manifest files
 COPY Cargo.toml Cargo.lock ./
-COPY src/ ./src/
 
-# Build the release binary
-RUN cargo build --release
+# Copy the source code
+COPY src ./src
 
-# Final stage
-FROM debian:bullseye-slim
+# Build the application in release mode without default features
+RUN cargo build --release --no-default-features
 
-# Install only necessary runtime dependencies
+# Create a minimal runtime image
+FROM debian:bookworm-slim
+
+# Install necessary runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the binary from the builder stage
-COPY --from=builder /usr/src/rust-compressor/target/release/rust-compressor /usr/local/bin/
+# Set the working directory
+WORKDIR /app
 
-# Create a non-root user
-RUN useradd -r -u 1001 -g root compressor
-USER compressor
+# Copy the built binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/rust-compressor /app/
 
-ENTRYPOINT ["/usr/local/bin/rust-compressor"] 
+# Make the binary executable
+RUN chmod +x /app/rust-compressor
+
+# Set the entrypoint to run the binary
+ENTRYPOINT ["/app/rust-compressor"]
+
+# Default command to show help
+CMD ["--help"] 

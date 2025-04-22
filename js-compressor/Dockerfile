@@ -1,17 +1,20 @@
-FROM node:20-slim
+# Use an official Node.js runtime as a base image
+FROM node:lts-bookworm-slim
 
-WORKDIR /usr/src/js-compressor
+# Set the working directory in the container
+WORKDIR /app
 
+# Copy package.json and package-lock.json (if you have one)
 COPY package*.json ./
 
-RUN npm ci --only=production
+# Install application dependencies
+RUN npm install
 
-COPY index.js ./
-COPY rle.js ./
-COPY lz.js ./
-COPY file-type.js ./
+# Copy the application source code
+COPY . .
 
-RUN useradd -r -u 1001 -g root compressor
-USER compressor
+# Set the entrypoint to execute your CLI script
+ENTRYPOINT ["node", "index.js"]
 
-ENTRYPOINT ["node", "index.js"] 
+# Default command to show help
+CMD ["--help"] 
