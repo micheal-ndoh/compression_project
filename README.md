@@ -11,7 +11,7 @@ This project implements RLE (Run-Length Encoding) and LZ77 compression algorithm
   - [Rust Compressor](#rust-compressor)
 - [Features](#features)
 - [API Documentation](#api-documentation)
-- [Troubleshooting](#troubleshooting)
+- []
 
 ## Docker Installation
 
