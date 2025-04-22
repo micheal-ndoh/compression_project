@@ -31,7 +31,9 @@ docker pull ghcr.io/micheal-ndoh/js-compressor:latest
 ```bash
 # Run JavaScript version
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest 
+```
 
+```bash
 # Run Rust version
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest
 ```
@@ -43,13 +45,19 @@ docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest
 ```bash
 # Compress a single file using RLE (JavaScript version)
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle
+```
 
+```bash
 # Compress a single file using LZ77 (Rust version)
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest compress /data/input.txt /data/output.lz77 --algorithm lz77
+```
 
+```bash
 # Compress multiple files (JavaScript version)
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress "/data/*.txt" /data/compressed --algorithm auto
+```
 
+```bash
 # Compress from stdin to stdout
 cat input.txt | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest compress - - --algorithm rle > output.rle
 ```
@@ -59,13 +67,19 @@ cat input.txt | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest compress
 ```bash
 # Decompress a single file (JavaScript version)
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest decompress /data/output.rle /data/decompressed.txt --algorithm rle
+```
 
+```bash
 # Decompress a single file (Rust version)
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest decompress /data/output.lz77 /data/decompressed.txt --algorithm lz77
+```
 
+```bash
 # Decompress multiple files
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest decompress "/data/*.rle" /data/decompressed --algorithm rle
+```
 
+```bash
 # Decompress from stdin to stdout
 cat output.rle | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest decompress - - --algorithm rle > decompressed.txt
 ```
@@ -75,10 +89,14 @@ cat output.rle | docker run -i ghcr.io/micheal-ndoh/js-compressor:latest decompr
 ```bash
 # Run with specific algorithm and window size
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.lz77 --algorithm lz77 --window-size 2048
+```
 
+```bash
 # Run with verbose output
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle --verbose
+```
 
+```bash
 # Run with force overwrite
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest compress /data/input.txt /data/output.rle --algorithm rle --force
 ```
@@ -127,7 +145,9 @@ cat input.txt | node cli.js compress - - --algorithm rle > output.rle
 
 # Decompress from stdin to stdout
 cat output.rle | node cli.js decompress - - --algorithm rle > decompressed.txt
+```
 
+```bash
 # Rust version
 cat input.txt | cargo run -- compress - - --algorithm rle > output.rle
 cat output.rle | cargo run -- decompress - - --algorithm rle > decompressed.txt
@@ -140,7 +160,9 @@ The compressor can automatically detect file types and choose the best algorithm
 ```bash
 # Automatic algorithm selection
 node cli.js compress input.txt output --algorithm auto
+```
 
+```bash
 # Rust version
 cargo run -- compress input.txt output --algorithm auto
 ```
@@ -167,12 +189,20 @@ Process multiple files in a single command:
 ```bash
 # Compress all .txt files
 node cli.js compress "*.txt" output_dir --algorithm auto
+```
 
+```bash
 # Decompress all .rle files
 node cli.js decompress "*.rle" output_dir --algorithm rle
+```
 
+```bash
 # Rust version
 cargo run -- compress "*.txt" output_dir --algorithm auto
+```
+
+```bash
+
 cargo run -- decompress "*.rle" output_dir --algorithm rle
 ```
 
@@ -185,13 +215,19 @@ cargo run -- decompress "*.rle" output_dir --algorithm rle
 ```bash
 # Compress a file using RLE
 node cli.js compress --input input.txt --output compressed.rle --algorithm rle
+```
 
+```bash
 # Compress a file using LZ77
 node cli.js compress --input input.txt --output compressed.lz77 --algorithm lz77 --window-size 2048
+```
 
+```bash
 # Decompress a file
 node cli.js decompress --input compressed.rle --output decompressed.txt --algorithm rle
+```
 
+```bash
 # Process multiple files
 node cli.js compress --input "*.txt" --output compressed_dir --algorithm auto
 ```
