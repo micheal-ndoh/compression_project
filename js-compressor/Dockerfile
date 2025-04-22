@@ -1,20 +1,22 @@
-# Use an official Node.js runtime as a base image
-FROM node:lts-bookworm-slim
+FROM node:18-alpine AS builder
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if you have one)
-COPY package*.json ./
+RUN apk update && apk add --no-cache python3 make g++ upx && rm -rf /var/cache/apk/*
 
-# Install application dependencies
-RUN npm install
+COPY package.json ./
+COPY package-lock.json ./
 
-# Copy the application source code
+RUN npm ci --verbose
+
 COPY . .
 
-# Set the entrypoint to execute your CLI script
-ENTRYPOINT ["node", "index.js"]
+RUN npx pkg . --targets node18-alpine-x64 --output /app/compress-js-alpine
 
-# Default command to show help
-CMD ["--help"] 
+FROM alpine:3.21 
+
+WORKDIR /app
+
+COPY --from=builder /app/compress-js-alpine .
+
+ENTRYPOINT ["/app/compress-js-alpine"]
