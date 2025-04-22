@@ -1,4 +1,3 @@
-
 function compressLZ77(data, options = {}) {
     if (!Buffer.isBuffer(data)) {
         throw new Error('Input must be a Buffer');

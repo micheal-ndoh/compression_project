@@ -5,7 +5,6 @@ const { Transform } = require('stream');
 const { detectFileType, suggestAlgorithm } = require('./file-type.js');
 const path = require('path');
 
-// Create output directories if they don't exist
 const OUTPUT_DIRS = {
     compressed: path.join(__dirname, 'output', 'compressed'),
     decompressed: path.join(__dirname, 'output', 'decompressed')
