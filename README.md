@@ -1,6 +1,6 @@
 # Compression Project
 
-This project implements RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript. It provides both containerized and local installation options, with support for stdin/stdout, file type detection, WASM compilation, and multiple file processing.
+This project implements RLE (Run-Length Encoding) and LZ77 compression algorithms in both Rust and JavaScript. It provides support for stdin/stdout, file type detection, WASM compilation, and multiple file processing.
 
 ## Table of Contents
 
@@ -36,22 +36,11 @@ docker run -v $(pwd):/data ghcr.io/micheal-ndoh/rust-compressor:latest
 docker run -v $(pwd):/data ghcr.io/micheal-ndoh/js-compressor:latest
 ```
 
-### Build the Docker Image Locally
-
-```bash
-# Clone the repository
-git clone https://github.com/micheal-ndoh/compression-project.git
-cd compression-project
-
-# Build the image
-docker build -t compression-project .
-```
-
 ## Local Installation
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js (v22)
 - Rust (latest stable)
 - Cargo
 - wasm-pack (for WASM compilation)
@@ -249,8 +238,6 @@ OPTIONS:
 
 - [RLE Documentation](https://hydrolix.io/blog/run-length-encoding/)
 - [LZ77 Documentation](https://medium.com/@vincentcorbee/lz77-compression-in-javascript-cd2583d2a8bd)
-
-
 
 ## Command Line Usage
 
