@@ -6,27 +6,53 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Define Docker command for Multipass
-DOCKER_CMD="multipass exec packa -- sudo /usr/bin/docker"
+# Function to convert bytes to human readable format
+human_readable_size() {
+    local bytes=$1
+    if [ $bytes -lt 1024 ]; then
+        echo "${bytes} B"
+    elif [ $bytes -lt 1048576 ]; then
+        echo "$(bc <<< "scale=2; $bytes/1024") KB"
+    elif [ $bytes -lt 1073741824 ]; then
+        echo "$(bc <<< "scale=2; $bytes/1048576") MB"
+    else
+        echo "$(bc <<< "scale=2; $bytes/1073741824") GB"
+    fi
+}
 
-# Get absolute path of current directory
-CURRENT_DIR=$(pwd)
+# Function to calculate compression ratio
+get_compression_ratio() {
+    local original_size=$1
+    local compressed_size=$2
+    echo "$(bc <<< "scale=2; ($compressed_size * 100) / $original_size")%"
+}
 
-# First, copy the current directory to Multipass instance
-echo -e "${YELLOW}Copying files to Multipass instance...${NC}"
-multipass copy-files "$CURRENT_DIR" "packa:/home/ubuntu/compression-test/"
-
-# Check if input filename is provided
+# Check if input file is provided
 if [ $# -ne 1 ]; then
     echo -e "${RED}Usage: $0 <input_file>${NC}"
-    echo "Example: $0 test.txt"
+    echo "Example: $0 myfile.txt"
     exit 1
 fi
 
-INPUT_FILE=$1
-# Auto-generate compressed file name based on input file
-COMPRESSED_FILE="${INPUT_FILE%.*}.compressed"
-REPORT_FILE="compression_report.md"
+# Define input and output file paths
+INPUT_FILE="$1"
+FILENAME=$(basename "$INPUT_FILE")
+BASENAME="${FILENAME%.*}"
+
+# JavaScript paths
+COMPRESSED_FILE_JS_RLE="js-compressor/compressed/${BASENAME}.rle"
+DECOMPRESSED_FILE_JS_RLE="js-compressor/decompressed/${BASENAME}_rle.out"
+COMPRESSED_FILE_JS_LZ="js-compressor/compressed/${BASENAME}.lz"
+DECOMPRESSED_FILE_JS_LZ="js-compressor/decompressed/${BASENAME}_lz.out"
+
+# Rust paths
+COMPRESSED_FILE_RUST_RLE="rust-compressor/compressed/${BASENAME}.rle"
+DECOMPRESSED_FILE_RUST_RLE="rust-compressor/decompressed/${BASENAME}_rle.out"
+COMPRESSED_FILE_RUST_LZ="rust-compressor/compressed/${BASENAME}.lz"
+DECOMPRESSED_FILE_RUST_LZ="rust-compressor/decompressed/${BASENAME}_lz.out"
+
+# File path for reporting
+REPORT_FILE="benchmark_report_${BASENAME}.md"
 
 # Check if input file exists
 if [ ! -f "$INPUT_FILE" ]; then
@@ -34,160 +60,116 @@ if [ ! -f "$INPUT_FILE" ]; then
     exit 1
 fi
 
-# Create output directory if it doesn't exist
-OUTPUT_DIR="compression_test_output"
-mkdir -p "$OUTPUT_DIR"
+# Get original file size
+ORIGINAL_SIZE=$(wc -c < "$INPUT_FILE")
+READABLE_SIZE=$(human_readable_size $ORIGINAL_SIZE)
 
-# Function to measure compression time
-measure_compression() {
-    local impl=$1
-    local algo=$2
-    local input=$3
-    local output=$4
+# Create directories
+mkdir -p js-compressor/compressed js-compressor/decompressed
+mkdir -p rust-compressor/compressed rust-compressor/decompressed
+
+# Create the report file and start writing
+echo "# Compression Benchmark Report" > $REPORT_FILE
+echo "## File Information" >> $REPORT_FILE
+echo "- **Input File:** \`$FILENAME\`" >> $REPORT_FILE
+echo "- **Original Size:** $READABLE_SIZE" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+echo "## Benchmark Results" >> $REPORT_FILE
+echo "| Implementation | Algorithm | Compression |  Compressed Size  | Ratio | Decompression | Status |" >> $REPORT_FILE
+echo "|---------------|-----------|-------------|------------------|--------|---------------|---------|" >> $REPORT_FILE
+
+benchmark_js() {
+    local algo=$1
+    local compressed_file_var="COMPRESSED_FILE_JS_${algo^^}"
+    local decompressed_file_var="DECOMPRESSED_FILE_JS_${algo^^}"
+
+    echo -e "${GREEN}Benchmarking JavaScript Compression with ${algo^^}...${NC}"
+
+    # Compression
     local start_time=$(date +%s.%N)
-    
-    if [ "$impl" == "js" ]; then
-        # Use JavaScript Docker container
-        $DOCKER_CMD run --rm -v "/home/ubuntu/compression-test:/data" ghcr.io/micheal-ndoh/js-compressor:latest compress "/data/$input" "/data/$output" --algorithm "$algo"
-    elif [ "$impl" == "rs" ]; then
-        # Use Rust Docker container
-        $DOCKER_CMD run --rm -v "/home/ubuntu/compression-test:/data" ghcr.io/micheal-ndoh/rust-compressor:latest compress "/data/$input" "/data/$output" --algorithm "$algo"
-    fi
-    
+    docker run --rm -v "$(pwd):/data" ghcr.io/micheal-ndoh/js-compressor:latest compress "/data/$INPUT_FILE" "/data/${!compressed_file_var}" --algorithm "$algo"
     local end_time=$(date +%s.%N)
-    echo "$end_time - $start_time" | bc
+    local compress_time=$(printf "%.2f s" $(echo "$end_time - $start_time" | bc))
+
+    # Decompression
+    start_time=$(date +%s.%N)
+    docker run --rm -v "$(pwd):/data" ghcr.io/micheal-ndoh/js-compressor:latest decompress "/data/${!compressed_file_var}" "/data/${!decompressed_file_var}" --algorithm "$algo"
+    end_time=$(date +%s.%N)
+    local decompress_time=$(printf "%.2f s" $(echo "$end_time - $start_time" | bc))
+
+    # Get file sizes and status
+    local compressed_size=0
+    local status="❌ Failed"
+    if [ -f "${!compressed_file_var}" ]; then
+        compressed_size=$(wc -c < "${!compressed_file_var}")
+        local readable_compressed=$(human_readable_size $compressed_size)
+        local ratio=$(get_compression_ratio $ORIGINAL_SIZE $compressed_size)
+        
+        if [ -f "${!decompressed_file_var}" ]; then
+            if cmp -s "$INPUT_FILE" "${!decompressed_file_var}"; then
+                status="✅ Success"
+            fi
+        fi
+        
+        echo "| JavaScript | ${algo^^} | $compress_time | $readable_compressed | $ratio | $decompress_time | $status |" >> "$REPORT_FILE"
+    else
+        echo "| JavaScript | ${algo^^} | $compress_time | Failed | - | $decompress_time | $status |" >> "$REPORT_FILE"
+    fi
 }
 
-# Function to measure decompression time
-measure_decompression() {
-    local impl=$1
-    local algo=$2
-    local compressed=$3
-    local decompressed=$4
+benchmark_rust() {
+    local algo=$1
+    local compressed_file_var="COMPRESSED_FILE_RUST_${algo^^}"
+    local decompressed_file_var="DECOMPRESSED_FILE_RUST_${algo^^}"
+
+    echo -e "${GREEN}Benchmarking Rust Compression with ${algo^^}...${NC}"
+
+    # Compression
     local start_time=$(date +%s.%N)
-    
-    if [ "$impl" == "js" ]; then
-        # Use JavaScript Docker container
-        $DOCKER_CMD run --rm -v "/home/ubuntu/compression-test:/data" ghcr.io/micheal-ndoh/js-compressor:latest decompress "/data/$compressed" "/data/$decompressed" --algorithm "$algo"
-    elif [ "$impl" == "rs" ]; then
-        # Use Rust Docker container
-        $DOCKER_CMD run --rm -v "/home/ubuntu/compression-test:/data" ghcr.io/micheal-ndoh/rust-compressor:latest decompress "/data/$compressed" "/data/$decompressed" --algorithm "$algo"
-    fi
-    
+    docker run --rm -v "$(pwd):/data" ghcr.io/micheal-ndoh/rust-compressor:latest compress "/data/$INPUT_FILE" "/data/${!compressed_file_var}" --algorithm "$algo"
     local end_time=$(date +%s.%N)
-    echo "$end_time - $start_time" | bc
-}
+    local compress_time=$(printf "%.2f s" $(echo "$end_time - $start_time" | bc))
 
-# Function to verify decompressed files match original
-verify_decompression() {
-    local input=$1
-    local decompressed=$2
-    
-    if [ ! -f "$decompressed" ]; then
-        echo "✗"
-        return
-    fi
-    
-    if diff "$input" "$decompressed" >/dev/null 2>&1; then
-        echo "✓"
-    else
-        echo "✗"
-    fi
-}
+    # Decompression
+    start_time=$(date +%s.%N)
+    docker run --rm -v "$(pwd):/data" ghcr.io/micheal-ndoh/rust-compressor:latest decompress "/data/${!compressed_file_var}" "/data/${!decompressed_file_var}" --algorithm "$algo"
+    end_time=$(date +%s.%N)
+    local decompress_time=$(printf "%.2f s" $(echo "$end_time - $start_time" | bc))
 
-# Function to get file size in human-readable format with percentage
-get_file_size() {
-    local file=$1
-    local original_size=$2
-    
-    if [ ! -f "$file" ]; then
-        echo "N/A"
-        return
-    fi
-    
-    # Get size in bytes
-    local size_bytes=$(wc -c < "$file")
-    
-    # Convert to human readable format
-    if [ $size_bytes -ge 1048576 ]; then
-        size_hr=$(echo "scale=2; $size_bytes/1048576" | bc)
-        unit="MiB"
-    elif [ $size_bytes -ge 1024 ]; then
-        size_hr=$(echo "scale=2; $size_bytes/1024" | bc)
-        unit="KiB"
+    # Get file sizes and status
+    local compressed_size=0
+    local status="❌ Failed"
+    if [ -f "${!compressed_file_var}" ]; then
+        compressed_size=$(wc -c < "${!compressed_file_var}")
+        local readable_compressed=$(human_readable_size $compressed_size)
+        local ratio=$(get_compression_ratio $ORIGINAL_SIZE $compressed_size)
+        
+        if [ -f "${!decompressed_file_var}" ]; then
+            if cmp -s "$INPUT_FILE" "${!decompressed_file_var}"; then
+                status="✅ Success"
+            fi
+        fi
+        
+        echo "| Rust | ${algo^^} | $compress_time | $readable_compressed | $ratio | $decompress_time | $status |" >> "$REPORT_FILE"
     else
-        size_hr=$size_bytes
-        unit="B"
-    fi
-    
-    # Calculate percentage if original size is provided
-    if [ -n "$original_size" ]; then
-        local percentage=$(echo "scale=1; ($size_bytes * 100) / $original_size" | bc)
-        echo "${size_hr}${unit} (${percentage}%)"
-    else
-        echo "${size_hr}${unit}"
+        echo "| Rust | ${algo^^} | $compress_time | Failed | - | $decompress_time | $status |" >> "$REPORT_FILE"
     fi
 }
 
-# Create markdown report
-echo "# Compression Performance Comparison Report" > $REPORT_FILE
-echo -e "\n## Test Configuration" >> $REPORT_FILE
-echo "- Input File: $INPUT_FILE" >> $REPORT_FILE
-original_size_bytes=$(wc -c < "$INPUT_FILE")
-original_size=$(get_file_size "$INPUT_FILE")
-echo "- Input Size: $original_size" >> $REPORT_FILE
-
-echo -e "\n## Test Results\n" >> $REPORT_FILE
-echo "| Algorithm | Implementation | Comp Time (s) | Decomp Time (s) | Comp Size | Verify |" >> $REPORT_FILE
-echo "|-----------|----------------|---------------|-----------------|-----------|---------|" >> $REPORT_FILE
-
-echo -e "${YELLOW}Testing $INPUT_FILE...${NC}"
-
-# Test all combinations
-for algo in "rle" "lz77"; do
-    for impl in "js" "rs"; do
-        echo -e "${GREEN}Testing $impl $algo...${NC}"
-        
-        # Create filenames with output directory
-        COMPRESSED="$OUTPUT_DIR/${COMPRESSED_FILE}.${impl}.${algo}"
-        DECOMPRESSED="$OUTPUT_DIR/${COMPRESSED_FILE}.${impl}.${algo}.decompressed"
-        
-        # Measure compression
-        comp_time=$(measure_compression "$impl" "$algo" "$INPUT_FILE" "$COMPRESSED")
-        
-        # Get compressed size with percentage (after compression, before decompression)
-        comp_size=$(get_file_size "$COMPRESSED" "$original_size_bytes")
-        
-        # Measure decompression
-        decomp_time=$(measure_decompression "$impl" "$algo" "$COMPRESSED" "$DECOMPRESSED")
-        
-        # Verify decompression
-        verify=$(verify_decompression "$INPUT_FILE" "$DECOMPRESSED")
-        
-        # Format times to 3 decimal places
-        comp_time=$(printf "%.3f" $comp_time)
-        decomp_time=$(printf "%.3f" $decomp_time)
-        
-        # Add to report
-        echo "| $algo | $impl | $comp_time | $decomp_time | $comp_size | $verify |" >> $REPORT_FILE
-    done
-done
+# Run benchmarks
+echo -e "${YELLOW}Starting benchmarks...${NC}"
+benchmark_js rle
+benchmark_rust rle
+benchmark_js lz
+benchmark_rust lz
 
 # Add summary section
-echo -e "\n## Summary\n" >> $REPORT_FILE
-echo "This report compares the performance of different compression algorithms and implementations." >> $REPORT_FILE
-echo "- Algorithms: RLE (Run-Length Encoding) and LZ77 (Lempel-Ziv)" >> $REPORT_FILE
-echo "- Implementations: JavaScript (Node.js) and Rust" >> $REPORT_FILE
-echo "- Compression Time: Time taken to compress the input file (in seconds)" >> $REPORT_FILE
-echo "- Decompression Time: Time taken to restore the original file (in seconds)" >> $REPORT_FILE
-echo "- Compressed Size: Size of the compressed output file (and percentage of original)" >> $REPORT_FILE
-echo "- Verification: Checks if the decompressed file matches the original (✓ = success, ✗ = failure)" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+echo "## Summary" >> $REPORT_FILE
+echo "- Compression time includes reading the input file and writing the compressed output" >> $REPORT_FILE
+echo "- Decompression time includes reading the compressed file and writing the decompressed output" >> $REPORT_FILE
+echo "- Ratio shows compressed size as a percentage of the original size" >> $REPORT_FILE
+echo "- Status indicates whether the decompressed file matches the original exactly" >> $REPORT_FILE
 
-# Copy back the results from Multipass
-echo -e "${YELLOW}Copying results back from Multipass instance...${NC}"
-multipass copy-files "packa:/home/ubuntu/compression-test/$OUTPUT_DIR" "$CURRENT_DIR/"
-multipass copy-files "packa:/home/ubuntu/compression-test/$REPORT_FILE" "$CURRENT_DIR/"
-
-echo -e "\n${GREEN}Report generated: $REPORT_FILE${NC}"
-echo -e "${YELLOW}To view the report, run: cat $REPORT_FILE${NC}"
-echo -e "${YELLOW}Compressed and decompressed files are in the '$OUTPUT_DIR' directory${NC}" 
+echo -e "${GREEN}Benchmarking complete!${NC}"
+echo -e "${YELLOW}Results have been written to: $REPORT_FILE${NC}" 
